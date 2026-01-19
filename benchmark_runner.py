@@ -12,9 +12,8 @@ import psycopg2
 import time
 import json
 import sys
-import os
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict
 
 class PostgreSQLBenchmark:
     def __init__(self, connection_params: Dict[str, str]):
@@ -389,7 +388,7 @@ def main():
         'database': os.getenv('PG_DATABASE', 'json_benchmark_db'),
         'user': os.getenv('PG_USER', 'benchmark_user'),
         'password': os.getenv('PG_PASSWORD', 'benchmark_pass_2024'),
-        'port': int(os.getenv('PG_PORT', 5432))
+        'port': int(os.getenv('PG_PORT', 5433))
     }
     
     # Benchmark settings

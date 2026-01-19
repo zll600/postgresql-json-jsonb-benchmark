@@ -1,0 +1,78 @@
+{
+  "test_info": {
+    "timestamp": "2026-01-19T22:53:06.321875",
+    "postgresql_version": "PostgreSQL 18.1 (Debian 18.1-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "server_info": "Dell PowerEdge R450, 2x Intel Xeon Silver 4310 24/48 cores @ 2.1GHz"
+  },
+  "insert_performance": {
+    "record_count": 1000000,
+    "json_time_seconds": 10.27,
+    "jsonb_time_seconds": 12.09,
+    "json_records_per_second": 97363,
+    "jsonb_records_per_second": 82685,
+    "performance_ratio": 0.85
+  },
+  "storage_sizes": {
+    "json": {
+      "total_size_bytes": 1275625472,
+      "data_size_bytes": 910229504,
+      "total_size_mb": 1216.53,
+      "data_size_mb": 868.06
+    },
+    "jsonb": {
+      "total_size_bytes": 947912704,
+      "data_size_bytes": 584753152,
+      "total_size_mb": 904.0,
+      "data_size_mb": 557.66
+    },
+    "size_ratio": 0.743
+  },
+  "query_performance": {
+    "simple_key_extraction": {
+      "description": "Simple key extraction (data->>user_id)",
+      "json_time_ms": 639.06,
+      "jsonb_time_ms": 306.18,
+      "json_result_count": 1,
+      "jsonb_result_count": 1,
+      "performance_ratio": 2.09
+    },
+    "nested_field_access": {
+      "description": "Nested field access",
+      "json_time_ms": 848.97,
+      "jsonb_time_ms": 293.28,
+      "json_result_count": 10000,
+      "jsonb_result_count": 10000,
+      "performance_ratio": 2.89
+    },
+    "array_operations": {
+      "description": "Array operations",
+      "json_time_ms": 882.36,
+      "jsonb_time_ms": 276.15,
+      "json_result_count": 1000000,
+      "jsonb_result_count": 1000000,
+      "performance_ratio": 3.2
+    },
+    "complex_conditions": {
+      "description": "Complex multi-field conditions",
+      "json_time_ms": 1217.45,
+      "jsonb_time_ms": 258.72,
+      "json_result_count": 40000,
+      "jsonb_result_count": 40000,
+      "performance_ratio": 4.71
+    },
+    "path_queries": {
+      "description": "Path-based queries",
+      "json_time_ms": 693.77,
+      "jsonb_time_ms": 274.58,
+      "json_result_count": 111112,
+      "jsonb_result_count": 111112,
+      "performance_ratio": 2.53
+    }
+  },
+  "update_performance": {
+    "records_updated": 1000,
+    "json_time_ms": 39.32,
+    "jsonb_time_ms": 34.07,
+    "performance_ratio": 1.15
+  }
+}
