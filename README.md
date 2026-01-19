@@ -1,4 +1,4 @@
-# PostgreSQL JSON vs JSONB Performance Benchmark
+# [PostgreSQL JSON vs JSONB Performance Benchmark](https://www.linkedin.com/pulse/json-vs-jsonb-postgresql-tested-1-million-records-results-iliushin-phcqf/)
 
 Comprehensive performance comparison between JSON and JSONB data types in PostgreSQL, tested on 1 million records.
 
