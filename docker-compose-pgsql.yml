@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${PG_DATABASE:-json_benchmark_db}
+      POSTGRES_USER: ${PG_USER:-benchmark_user}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-benchmark_pass_2024}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${PG_PORT_LOCAL:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - type: bind
+        source: ./01-init.sql
+        target: /docker-entrypoint-initdb.d/01-init.sql
+        read_only: true
+    command: >
+      postgres
+      -c shared_buffers=${PG_SHARED_BUFFERS:-8GB}
+      -c work_mem=${PG_WORK_MEM:-256MB}
+      -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-2GB}
+      -c max_parallel_workers_per_gather=${PG_MAX_PARALLEL_WORKERS:-4}
+      -c random_page_cost=1.1
+      -c effective_cache_size=24GB
+      -c log_statement=none
+      -c log_min_duration_statement=5000
+      -c fsync=off
+      -c synchronous_commit=off
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c max_wal_size=4GB
+      -c min_wal_size=1GB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-benchmark_user} -d ${PG_DATABASE:-json_benchmark_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - benchmark_network
+
+volumes:
+  postgres_data:
+    name: ${COMPOSE_PROJECT_NAME:-postgresql-json-jsonb-benchmark}_postgres_data
+
+networks:
+  benchmark_network:
+    name: ${COMPOSE_PROJECT_NAME:-postgresql-json-jsonb-benchmark}_network
+    driver: bridge

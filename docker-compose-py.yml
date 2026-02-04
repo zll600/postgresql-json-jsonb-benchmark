@@ -1,0 +1,51 @@
+services:
+  benchmark_runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_DATABASE: ${PG_DATABASE:-json_benchmark_db}
+      PG_USER: ${PG_USER:-benchmark_user}
+      PG_PASSWORD: ${PG_PASSWORD:-benchmark_pass_2024}
+      BENCHMARK_RECORDS: ${BENCHMARK_RECORDS:-1000000}
+      BENCHMARK_OUTPUT_FILE: ${BENCHMARK_OUTPUT_FILE:-benchmark_results.json}
+    volumes:
+      - type: bind
+        source: ./results
+        target: /app/results
+      - type: bind
+        source: ./.env
+        target: /app/.env
+        read_only: true
+    working_dir: /app
+    command: >
+      sh -c "
+        echo '🚀 Starting PostgreSQL JSON vs JSONB Benchmark...' &&
+        echo '=================================================' &&
+        echo 'Test Environment: Dell PowerEdge R450, 2x Intel Xeon Silver 4310 24/48 cores @ 2.1GHz' &&
+        echo 'Records to test: ${BENCHMARK_RECORDS:-1000000}' &&
+        echo 'Database: ${PG_DATABASE:-json_benchmark_db}' &&
+        echo 'Output file: ${BENCHMARK_OUTPUT_FILE:-benchmark_results.json}' &&
+        echo '=================================================' &&
+        echo 'DEBUG: Environment variables:' &&
+        echo 'PG_HOST='$PG_HOST &&
+        echo 'PG_PORT='$PG_PORT &&
+        echo 'PG_DATABASE='$PG_DATABASE &&
+        echo 'PG_USER='$PG_USER &&
+        echo '=================================================' &&
+        echo '' &&
+        echo 'Waiting for database to be fully ready...' &&
+        sleep 5 &&
+        uv run benchmark_runner.py --output /app/results/${BENCHMARK_OUTPUT_FILE:-benchmark_results.json} &&
+        echo '' &&
+        echo '✅ Benchmark completed! Check ./results/ folder for detailed results.'
+      "
+    networks:
+      - benchmark_network
+
+networks:
+  benchmark_network:
+    name: ${COMPOSE_PROJECT_NAME:-postgresql-json-jsonb-benchmark}_network
+    driver: bridge
