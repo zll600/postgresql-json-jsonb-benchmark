@@ -1,0 +1,45 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-json_benchmark_db}
+      MYSQL_USER: ${MYSQL_USER:-benchmark_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-benchmark_pass_2024}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_pass_2024}
+    ports:
+      - "${MYSQL_PORT_LOCAL:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - type: bind
+        source: ./01-init-mysql.sql
+        target: /docker-entrypoint-initdb.d/01-init.sql
+        read_only: true
+    command: >
+      mysqld
+      --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-512M}
+      --innodb-log-file-size=${MYSQL_INNODB_LOG_FILE_SIZE:-256M}
+      --innodb-flush-log-at-trx-commit=0
+      --sync-binlog=0
+      --innodb-doublewrite=0
+      --max-connections=100
+      --thread-cache-size=16
+      --table-open-cache=4000
+      --innodb-io-capacity=2000
+      --innodb-io-capacity-max=4000
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_pass_2024}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - benchmark_network
+
+volumes:
+  mysql_data:
+    name: ${COMPOSE_PROJECT_NAME:-postgresql-json-jsonb-benchmark}_mysql_data
+
+networks:
+  benchmark_network:
+    name: ${COMPOSE_PROJECT_NAME:-postgresql-json-jsonb-benchmark}_network
+    driver: bridge

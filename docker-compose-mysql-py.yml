@@ -1,0 +1,54 @@
+services:
+  mysql_benchmark_runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-json_benchmark_db}
+      MYSQL_USER: ${MYSQL_USER:-benchmark_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-benchmark_pass_2024}
+      BENCHMARK_RECORDS: ${BENCHMARK_RECORDS:-1000000}
+      MYSQL_BENCHMARK_OUTPUT_FILE: ${MYSQL_BENCHMARK_OUTPUT_FILE:-mysql_benchmark_results.json}
+    volumes:
+      - type: bind
+        source: ./results
+        target: /app/results
+      - type: bind
+        source: ./.env
+        target: /app/.env
+        read_only: true
+    working_dir: /app
+    command: >
+      sh -c "
+        echo 'Starting MySQL JSON Benchmark...' &&
+        echo '=================================================' &&
+        echo 'Test Environment: Dell PowerEdge R450, 2x Intel Xeon Silver 4310 24/48 cores @ 2.1GHz' &&
+        echo 'Records to test: ${BENCHMARK_RECORDS:-1000000}' &&
+        echo 'Database: ${MYSQL_DATABASE:-json_benchmark_db}' &&
+        echo 'Output file: ${MYSQL_BENCHMARK_OUTPUT_FILE:-mysql_benchmark_results.json}' &&
+        echo '=================================================' &&
+        echo 'DEBUG: Environment variables:' &&
+        echo 'MYSQL_HOST='$MYSQL_HOST &&
+        echo 'MYSQL_PORT='$MYSQL_PORT &&
+        echo 'MYSQL_DATABASE='$MYSQL_DATABASE &&
+        echo 'MYSQL_USER='$MYSQL_USER &&
+        echo '=================================================' &&
+        echo '' &&
+        echo 'Waiting for database to be fully ready...' &&
+        sleep 10 &&
+        uv run mysql_benchmark_runner.py --output /app/results/${MYSQL_BENCHMARK_OUTPUT_FILE:-mysql_benchmark_results.json} &&
+        echo '' &&
+        echo 'Benchmark completed! Check ./results/ folder for detailed results.'
+      "
+    networks:
+      - benchmark_network
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+networks:
+  benchmark_network:
+    name: ${COMPOSE_PROJECT_NAME:-postgresql-json-jsonb-benchmark}_network
+    driver: bridge
