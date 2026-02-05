@@ -139,6 +139,11 @@ class MySQLBenchmark:
             CREATE INDEX idx_json_city ON json_test ((CAST(data->>'$.profile.city' AS CHAR(50))))
         """)
 
+        # Update statistics for query optimizer
+        print("Running ANALYZE TABLE...")
+        self.cur.execute("ANALYZE TABLE json_test")
+        self.cur.fetchall()  # Consume result set
+
     def check_storage_sizes(self):
         """Check storage sizes"""
         print("Checking storage sizes...")
@@ -256,15 +261,15 @@ class MySQLBenchmark:
         print(f"  JSON: {insert['json_time_seconds']}s ({insert['json_records_per_second']:,} rec/s)")
 
         storage = self.results['storage_sizes']
-        print(f"\nStorage Size:")
+        print("\nStorage Size:")
         print(f"  JSON: {storage['json']['total_size_mb']} MB")
 
-        print(f"\nQuery Performance:")
+        print("\nQuery Performance:")
         for name, data in self.results['query_performance'].items():
             print(f"  {data['description']}: {data['json_time_ms']}ms")
 
         update = self.results['update_performance']
-        print(f"\nUpdate Performance:")
+        print("\nUpdate Performance:")
         print(f"  {update['records_updated']} records in {update['json_time_ms']}ms")
 
         print("\nDetailed results saved to:", output_file)
@@ -348,7 +353,7 @@ def main():
         benchmark.benchmark_updates()
         benchmark.generate_report(output_file)
 
-        print(f"\nBenchmark completed successfully!")
+        print("\nBenchmark completed successfully!")
         print(f"Results saved to: {output_file}")
 
     except Exception as e:

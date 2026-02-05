@@ -147,6 +147,11 @@ class PostgreSQLBenchmark:
         print("Creating indexes...")
         self.cur.execute("CREATE INDEX idx_json_gin ON json_test USING GIN ((data::jsonb))")
         self.cur.execute("CREATE INDEX idx_jsonb_gin ON jsonb_test USING GIN (data)")
+
+        # Update statistics for query optimizer
+        print("Running VACUUM ANALYZE...")
+        self.cur.execute("VACUUM ANALYZE json_test")
+        self.cur.execute("VACUUM ANALYZE jsonb_test")
     
     def check_storage_sizes(self):
         """Compare storage sizes"""
@@ -192,9 +197,9 @@ class PostgreSQLBenchmark:
         
         queries = {
             'simple_key_extraction': {
-                'description': 'Simple key extraction (data->>user_id)',
-                'json_query': "SELECT COUNT(*) FROM json_test WHERE data->>'user_id' = '12345'",
-                'jsonb_query': "SELECT COUNT(*) FROM jsonb_test WHERE data->>'user_id' = '12345'"
+                'description': 'Simple key extraction (containment @>)',
+                'json_query': "SELECT COUNT(*) FROM json_test WHERE data::jsonb @> '{\"user_id\": 12345}'",
+                'jsonb_query': "SELECT COUNT(*) FROM jsonb_test WHERE data @> '{\"user_id\": 12345}'"
             },
             'nested_field_access': {
                 'description': 'Nested field access',
@@ -302,24 +307,24 @@ class PostgreSQLBenchmark:
         print("="*60)
         
         insert = self.results['insert_performance']
-        print(f"INSERT Performance (1M records):")
+        print("INSERT Performance (1M records):")
         print(f"  JSON:  {insert['json_time_seconds']}s ({insert['json_records_per_second']:,} rec/s)")
         print(f"  JSONB: {insert['jsonb_time_seconds']}s ({insert['jsonb_records_per_second']:,} rec/s)")
         print(f"  Winner: {'JSON' if insert['performance_ratio'] > 1 else 'JSONB'} ({abs(insert['performance_ratio'] - 1)*100:.1f}% faster)")
         
         storage = self.results['storage_sizes']
-        print(f"\nStorage Size:")
+        print("\nStorage Size:")
         print(f"  JSON:  {storage['json']['total_size_mb']} MB")
         print(f"  JSONB: {storage['jsonb']['total_size_mb']} MB")
         print(f"  JSONB is {(1-storage['size_ratio'])*100:.1f}% smaller")
         
-        print(f"\nQuery Performance (average improvement):")
+        print("\nQuery Performance (average improvement):")
         query_ratios = [q['performance_ratio'] for q in self.results['query_performance'].values() if q['performance_ratio'] > 0]
         avg_improvement = sum(query_ratios) / len(query_ratios) if query_ratios else 0
         print(f"  JSONB is {avg_improvement:.1f}x faster on average")
         
         update = self.results['update_performance']
-        print(f"\nUpdate Performance:")
+        print("\nUpdate Performance:")
         print(f"  JSONB is {update['performance_ratio']:.1f}x faster")
         
         print("\nDetailed results saved to:", output_file)
@@ -412,7 +417,7 @@ def main():
         benchmark.benchmark_updates()
         benchmark.generate_report(output_file)
         
-        print(f"\n🎉 Benchmark completed successfully!")
+        print("\n🎉 Benchmark completed successfully!")
         print(f"📊 Results saved to: {output_file}")
         
     except Exception as e:
