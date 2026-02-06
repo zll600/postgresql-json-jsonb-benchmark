@@ -66,60 +66,53 @@ class MySQLBenchmark:
 
         print("Tables created successfully")
 
-    def generate_test_json(self, i: int) -> str:
-        """Generate test JSON data for a given index"""
-        theme_options = ['dark', 'light', 'auto']
-        notifications = 'true' if i % 2 == 0 else 'false'
-
-        return json.dumps({
-            "user_id": i,
-            "username": f"user_{i}",
-            "profile": {
-                "name": f"User {i}",
-                "age": (i % 50) + 18,
-                "city": f"City_{(i % 100) + 1}",
-                "preferences": {
-                    "theme": theme_options[i % 3],
-                    "language": "en",
-                    "notifications": notifications == 'true'
-                }
-            },
-            "orders": [
-                {"id": i * 2, "amount": (i % 1000) + 10, "status": "completed"},
-                {"id": (i * 2) + 1, "amount": (i % 500) + 5, "status": "pending"}
-            ],
-            "metadata": {
-                "last_login": f"2024-12-{(i % 30) + 1:02d}",
-                "ip_address": f"192.168.1.{(i % 254) + 1}",
-                "user_agent": f"Browser_{(i % 10) + 1}"
-            }
-        })
 
     def benchmark_inserts(self, record_count: int = 1000000):
-        """Benchmark INSERT performance"""
+        """Benchmark INSERT performance using recursive CTE for bulk insert"""
         print(f"Benchmarking INSERT performance with {record_count:,} records...")
+        print("Using recursive CTE for bulk insertion...")
 
-        # Prepare batch insert
-        batch_size = 10000
+        # Increase CTE recursion depth limit for large record counts
+        self.cur.execute(f"SET SESSION cte_max_recursion_depth = {record_count + 1}")
 
         start_time = time.time()
 
-        for batch_start in range(1, record_count + 1, batch_size):
-            batch_end = min(batch_start + batch_size, record_count + 1)
-            values = []
-            for i in range(batch_start, batch_end):
-                values.append((self.generate_test_json(i),))
-
-            self.cur.executemany(
-                "INSERT INTO json_test (data) VALUES (%s)",
-                values
+        # Bulk insert using recursive CTE - single INSERT statement
+        self.cur.execute(f"""
+            INSERT INTO json_test (data)
+            WITH RECURSIVE num_seq AS (
+                SELECT 1 AS i
+                UNION ALL
+                SELECT i + 1 FROM num_seq WHERE i < {record_count}
             )
-
-            if batch_start % 100000 == 1:
-                elapsed = time.time() - start_time
-                print(f"  Inserted {batch_end - 1:,} records ({elapsed:.1f}s)")
+            SELECT JSON_OBJECT(
+                'user_id', i,
+                'username', CONCAT('user_', i),
+                'profile', JSON_OBJECT(
+                    'name', CONCAT('User ', i),
+                    'age', (i % 50) + 18,
+                    'city', CONCAT('City_', (i % 100) + 1),
+                    'preferences', JSON_OBJECT(
+                        'theme', ELT((i % 3) + 1, 'dark', 'light', 'auto'),
+                        'language', 'en',
+                        'notifications', IF(i % 2 = 0, TRUE, FALSE)
+                    )
+                ),
+                'orders', JSON_ARRAY(
+                    JSON_OBJECT('id', i * 2, 'amount', (i % 1000) + 10, 'status', 'completed'),
+                    JSON_OBJECT('id', (i * 2) + 1, 'amount', (i % 500) + 5, 'status', 'pending')
+                ),
+                'metadata', JSON_OBJECT(
+                    'last_login', CONCAT('2024-12-', LPAD((i % 30) + 1, 2, '0')),
+                    'ip_address', CONCAT('192.168.1.', (i % 254) + 1),
+                    'user_agent', CONCAT('Browser_', (i % 10) + 1)
+                )
+            )
+            FROM num_seq
+        """)
 
         json_insert_time = time.time() - start_time
+        print(f"  Inserted {record_count:,} records in {json_insert_time:.1f}s")
 
         self.results['insert_performance'] = {
             'record_count': record_count,
@@ -138,6 +131,9 @@ class MySQLBenchmark:
         self.cur.execute("""
             CREATE INDEX idx_json_city ON json_test ((CAST(data->>'$.profile.city' AS CHAR(50))))
         """)
+        # self.cur.execute("""
+        #     CREATE INDEX idx_json_theme ON json_test ((CAST(data->>'$.profile.preferences.theme' AS CHAR(20))))
+        # """)
 
         # Update statistics for query optimizer
         print("Running ANALYZE TABLE...")
